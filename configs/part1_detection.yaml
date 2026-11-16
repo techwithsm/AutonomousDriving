@@ -1,0 +1,89 @@
+# Part 1 - Vehicle detection (object detection with a CNN)
+# Every value can be overridden from the CLI, e.g.:
+#   python scripts/run_part1.py train --set train.epochs=5 train.device=cpu
+
+seed: 42
+
+source:
+  images_dir: data/Part 1/Images/Images     # already-extracted images
+  labels_csv: data/Part 1/labels.csv        # id,class,xmin,ymin,xmax,ymax (no header)
+  images_zip: data/Part 1/Images.zip        # used only if images_dir is missing/empty
+  extract_workers: 8                        # parallel unzip threads
+
+# Task 1 - parent folder for custom model training + child folders
+workspace:
+  root: workspace/vehicle_detection
+  children:
+    raw: raw                  # zip extraction target
+    dataset: dataset          # YOLO-format images/ + labels/ per split
+    runs: runs                # training / validation runs (weights, curves)
+    inference: inference      # annotated predictions on sample images
+    reports: reports          # EDA plots, metrics tables
+
+# Task 2 - dataset preparation
+dataset:
+  classes:                    # fixed class order -> YOLO class ids 0..10
+    - car
+    - pickup_truck
+    - motorized_vehicle
+    - bus
+    - articulated_truck
+    - work_van
+    - pedestrian
+    - single_unit_truck
+    - non-motorized_vehicle
+    - bicycle
+    - motorcycle
+  split: {train: 0.8, val: 0.1, test: 0.1}   # image-level, stratified by rarest class in image
+  min_box_px: 2               # drop degenerate boxes narrower/shorter than this
+  link_mode: hardlink         # hardlink | copy | symlink (hardlink = instant, no extra disk)
+
+# Task 3 - model (CNN detector)
+model:
+  # YOLO11 = CSP-style CNN backbone + PAN neck + anchor-free decoupled head.
+  # Options: yolo11n.pt (fastest) / yolo11s.pt (balanced, default) / yolo11m.pt (most accurate)
+  weights: yolo11s.pt         # COCO-pretrained -> transfer learning
+  pretrained: true
+
+train:
+  epochs: 60
+  imgsz: 640                  # native width of most images is 720 -> keep small objects visible
+  batch: 16                   # -1 = auto batch on GPU
+  device: auto                # auto | cpu | 0 | 0,1
+  workers: 4
+  patience: 15                # early stopping
+  optimizer: SGD              # 'auto' would ignore lr0
+  lr0: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  cos_lr: true
+  close_mosaic: 10
+  fraction: 1.0               # <1.0 trains on a subset (quick experiments)
+  cache: false                # ram | disk | false
+  augment:                    # traffic-camera specific augmentation
+    hsv_h: 0.015
+    hsv_s: 0.6
+    hsv_v: 0.5                # day / night / yellow-tint lighting variation
+    degrees: 0.0
+    translate: 0.1
+    scale: 0.5
+    fliplr: 0.5
+    flipud: 0.0               # cameras never see upside-down roads
+    mosaic: 1.0
+    mixup: 0.1
+  run_name: yolo11s_vehicles
+
+# Task 4 - evaluation
+evaluate:
+  split: test
+  conf: 0.001                 # low conf for mAP computation (standard)
+  iou: 0.6
+  weights: null               # null -> <runs>/<run_name>/weights/best.pt
+
+# Task 5 - inference
+predict:
+  source: null                # null -> random sample of test images
+  n_samples: 12
+  conf: 0.35
+  iou: 0.5
+  max_det: 100

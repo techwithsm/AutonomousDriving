@@ -1,0 +1,20 @@
+# environments
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+
+# large data & generated artefacts
+data/
+workspace/
+outputs/
+runs/
+*.pt
+*.onnx
+
+# OS junk
+.DS_Store
+__MACOSX/
+Thumbs.db

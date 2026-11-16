@@ -1,0 +1,31 @@
+# Part 2 - Tesla autopilot deaths: data inspection, cleaning and EDA
+
+input_csv: "data/Part 2/Tesla - Deaths.csv"
+
+output:
+  root: outputs/part2
+  cleaned_csv: outputs/part2/tesla_deaths_clean.csv
+  figures: outputs/part2/figures
+  tables: outputs/part2/tables
+  report: outputs/part2/report.md
+
+cleaning:
+  # Task 1b - columns judged irrelevant for the analysis
+  drop_columns:
+    - "Unnamed: 16"           # archive links
+    - "Unnamed: 17"           # archive links
+    - Source                  # URL of news source
+    - Note                    # free-text, 97% empty
+    - Deceased 1              # victim names (PII, mostly empty)
+    - Deceased 2
+    - Deceased 3
+    - Deceased 4
+  country_aliases:
+    Holland: Netherlands
+  valid_models: [S, "3", X, Y]
+  unknown_label: Unknown
+  non_us_state_label: Non-US
+
+analysis:
+  top_n_countries: 10
+  top_n_states: 12
